@@ -87,6 +87,40 @@ def test_shell_injection_semicolon():
     assert verdict.risk == RiskLevel.CRITICAL
 
 
+@pytest.mark.parametrize(
+    "tool",
+    [
+        "shell",
+        "sh",
+        "bash",
+        "dash",
+        "ksh",
+        "zsh",
+        "fish",
+        "cmd",
+        "cmd.exe",
+        "powershell",
+        "powershell.exe",
+        "pwsh",
+        "pwsh.exe",
+        "PowerShell",
+    ],
+)
+def test_shell_injection_applies_to_shell_capable_tool_names(tool: str) -> None:
+    policy = Policy(name="t", description="t", default_action=Action.ALLOW, rules=[])
+    verdict = Guard(policy).check(ToolCall(tool=tool, resource="echo safe; rm -rf /"))
+
+    assert not verdict.allowed
+    assert verdict.risk == RiskLevel.CRITICAL
+
+
+def test_shell_injection_check_does_not_apply_to_unrelated_tools() -> None:
+    policy = Policy(name="t", description="t", default_action=Action.ALLOW, rules=[])
+    verdict = Guard(policy).check(ToolCall(tool="database", resource="select ';'"))
+
+    assert verdict.allowed
+
+
 def test_shell_injection_pipe():
     policy = Policy(name="t", description="t", default_action=Action.ALLOW, rules=[])
     guard = Guard(policy)

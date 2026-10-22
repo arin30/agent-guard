@@ -20,6 +20,24 @@ import yaml
 
 from .redos import is_safe_pattern, looks_like_regex
 
+_SHELL_TOOL_NAMES = frozenset(
+    {
+        "shell",
+        "sh",
+        "bash",
+        "dash",
+        "ksh",
+        "zsh",
+        "fish",
+        "cmd",
+        "cmd.exe",
+        "powershell",
+        "powershell.exe",
+        "pwsh",
+        "pwsh.exe",
+    }
+)
+
 
 def _normalize_path(path: str, *, security_check: bool = True) -> str:
     """Normalize a path for cross-platform matching.
@@ -541,8 +559,11 @@ class Guard:
                     risk=RiskLevel.MEDIUM,
                 )
 
-        # SECURITY: Sanitize shell resource to prevent command injection
-        if call.tool in ("shell", "bash"):
+        # SECURITY: Sanitize resources passed to shell-capable tools. Tool
+        # adapters use several common shell names, and treating only "shell"
+        # and "bash" as interpreters lets the same command bypass this check
+        # simply by being labelled "sh" or "powershell".
+        if call.tool.lower() in _SHELL_TOOL_NAMES:
             dangerous = [";", "|", "&", "$", "`", ">", "<", "\n", "\r", "&&", "||", "(", ")"]
             for ch in dangerous:
                 if ch in (call.resource or ""):
